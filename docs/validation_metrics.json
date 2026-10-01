@@ -1,0 +1,95 @@
+[
+  {
+    "subject": "gargoyles",
+    "downloaded": 16,
+    "valid": 15,
+    "accepted": 9,
+    "needs_review": 6,
+    "groups": 2,
+    "silhouette": 0.28577913023685064,
+    "stability": 0.8653846153846154,
+    "heldout_iou": 0.6451735335073112,
+    "baseline_iou": 0.4323264882361767,
+    "geometry": {
+      "method": "maximal-inscribed-disc-ellipsoid-union",
+      "depth_prior": "isotropic_local_radius",
+      "depth_scale": 1.0,
+      "size_mm": 120.0,
+      "medial_points": 189,
+      "radius_cover_points": 1382,
+      "projection_iou": 1.0,
+      "components_3d": 1,
+      "watertight": true,
+      "vertices": 10578,
+      "faces": 21160,
+      "extents_mm": [
+        120.0,
+        48.35415455283646,
+        72.96912091415462
+      ],
+      "volume_mm3": 114147.23322115873
+    }
+  },
+  {
+    "subject": "cats",
+    "downloaded": 16,
+    "valid": 16,
+    "accepted": 12,
+    "needs_review": 4,
+    "groups": 2,
+    "silhouette": 0.20121427564364058,
+    "stability": 0.8488805970149254,
+    "heldout_iou": 0.7260346081285569,
+    "baseline_iou": 0.5881198231571092,
+    "geometry": {
+      "method": "maximal-inscribed-disc-ellipsoid-union",
+      "depth_prior": "isotropic_local_radius",
+      "depth_scale": 1.0,
+      "size_mm": 120.0,
+      "medial_points": 196,
+      "radius_cover_points": 1321,
+      "projection_iou": 1.0,
+      "components_3d": 1,
+      "watertight": true,
+      "vertices": 10582,
+      "faces": 21160,
+      "extents_mm": [
+        120.0,
+        50.76946934845457,
+        82.04379509200209
+      ],
+      "volume_mm3": 125224.56746199158
+    }
+  },
+  {
+    "subject": "dogs",
+    "downloaded": 16,
+    "valid": 16,
+    "accepted": 14,
+    "needs_review": 2,
+    "groups": 2,
+    "silhouette": 0.3567153063587693,
+    "stability": 0.8941923365449984,
+    "heldout_iou": 0.6752101484732094,
+    "baseline_iou": 0.5355410419799673,
+    "geometry": {
+      "method": "maximal-inscribed-disc-ellipsoid-union",
+      "depth_prior": "isotropic_local_radius",
+      "depth_scale": 1.0,
+      "size_mm": 120.0,
+      "medial_points": 151,
+      "radius_cover_points": 2850,
+      "projection_iou": 1.0,
+      "components_3d": 1,
+      "watertight": true,
+      "vertices": 26040,
+      "faces": 52080,
+      "extents_mm": [
+        120.0,
+        96.86046659989248,
+        114.29928798073873
+      ],
+      "volume_mm3": 573706.2835489224
+    }
+  }
+]
