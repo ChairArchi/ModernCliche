@@ -5,5 +5,6 @@ Pillow>=10
 requests>=2.31
 scikit-learn>=1.5
 scikit-image>=0.25
+scipy>=1.14
 trimesh>=4.0
 plotly>=6.0
