@@ -1,0 +1,9 @@
+streamlit>=1.49,<2
+numpy>=2.0
+pandas>=2.2
+Pillow>=10
+requests>=2.31
+scikit-learn>=1.5
+scikit-image>=0.25
+trimesh>=4.0
+plotly>=6.0
