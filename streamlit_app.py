@@ -18,23 +18,53 @@ st.title('EIGENSIGN')
 st.caption('UNIVERSAL ICON → DATASET → SORTING → EIGENSIGN → 3D PHYSICALIZATION')
 st.write('실제 이미지들을 같은 조건으로 정규화하고 PCA/유사도 분석을 거쳐 공통성과 불일치를 2D·3D 형태로 드러내는 프로토타입이야. 생성형 이미지 AI는 사용하지 않아.')
 
-API='https://api.openverse.org/v1/images/'
+COMMONS_API='https://commons.wikimedia.org/w/api.php'
 
-def search_openverse(q, n=24):
-    r=requests.get(API,params={'q':q,'page_size':min(n,80),'mature':'false'},timeout=20,headers={'User-Agent':'EIGENSIGN/0.2'})
-    r.raise_for_status(); out=[]
-    for x in r.json().get('results',[]):
-        u=x.get('thumbnail') or x.get('url')
-        if u: out.append({'title':x.get('title') or 'Untitled','thumb':u,'url':x.get('url') or '', 'license':x.get('license') or '', 'source':x.get('source') or x.get('provider') or ''})
+def search_commons(q, n=24):
+    params={
+        'action':'query',
+        'generator':'search',
+        'gsrsearch':q,
+        'gsrnamespace':6,
+        'gsrlimit':min(n,50),
+        'prop':'imageinfo',
+        'iiprop':'url|extmetadata',
+        'iiurlwidth':640,
+        'format':'json',
+        'formatversion':2,
+        'origin':'*',
+    }
+    r=requests.get(COMMONS_API,params=params,timeout=25,headers={'User-Agent':'EIGENSIGN/0.3 (research prototype)'})
+    r.raise_for_status()
+    pages=r.json().get('query',{}).get('pages',[])
+    out=[]
+    for p in pages:
+        infos=p.get('imageinfo') or []
+        if not infos: continue
+        info=infos[0]
+        thumb=info.get('thumburl') or info.get('url')
+        if not thumb: continue
+        ext=info.get('extmetadata') or {}
+        lic=(ext.get('LicenseShortName') or {}).get('value','')
+        artist=(ext.get('Artist') or {}).get('value','')
+        out.append({
+            'title':p.get('title','').replace('File:',''),
+            'thumb':thumb,
+            'url':info.get('descriptionurl') or info.get('url') or '',
+            'license':lic,
+            'source':'Wikimedia Commons',
+            'artist':artist,
+        })
     return out
 
 def download_items(items):
     ims=[]; meta=[]
     for x in items:
         try:
-            r=requests.get(x['thumb'],timeout=15,headers={'User-Agent':'EIGENSIGN/0.2'}); r.raise_for_status()
+            r=requests.get(x['thumb'],timeout=20,headers={'User-Agent':'EIGENSIGN/0.3 (research prototype)'}); r.raise_for_status()
             ims.append(Image.open(BytesIO(r.content)).convert('RGB')); meta.append(x)
-        except Exception: pass
+        except Exception:
+            pass
     return ims,meta
 
 def demo_sign(i,size=160):
@@ -102,14 +132,17 @@ for k,v in {'images':[],'meta':[],'analysis':None,'mesh':None}.items():
     if k not in st.session_state: st.session_state[k]=v
 
 st.header('1. DATASET')
-mode=st.radio('Source',['Openverse keyword search','Upload images','Demo EXIT dataset'],horizontal=True)
-if mode=='Openverse keyword search':
+mode=st.radio('Source',['Wikimedia Commons search','Upload images','Demo EXIT dataset'],horizontal=True)
+if mode=='Wikimedia Commons search':
     q=st.text_input('Keyword','emergency exit sign pictogram')
-    n=st.slider('Max results',8,60,24,4)
+    n=st.slider('Max results',8,50,24,4)
     if st.button('SEARCH',type='primary'):
-        with st.spinner('공개 라이선스 이미지 검색 중…'):
-            try: items=search_openverse(q,n); ims,meta=download_items(items)
-            except Exception as e: st.error(str(e)); ims=[]; meta=[]
+        with st.spinner('Wikimedia Commons에서 이미지 검색 중…'):
+            try:
+                items=search_commons(q,n); ims,meta=download_items(items)
+                if not ims: st.warning('검색 결과는 있었지만 분석 가능한 이미지 파일을 불러오지 못했어. 검색어를 바꿔봐.')
+            except Exception as e:
+                st.error(f'검색 오류: {e}'); ims=[]; meta=[]
         st.session_state.images=ims; st.session_state.meta=meta; st.session_state.analysis=None
 elif mode=='Upload images':
     files=st.file_uploader('PNG / JPG / WEBP',type=['png','jpg','jpeg','webp'],accept_multiple_files=True)
