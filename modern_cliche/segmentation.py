@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-import cv2
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
@@ -29,6 +28,10 @@ def extract_mask(image: Image.Image, method: str = "u2net", threshold: float = 0
         # Explicit option for existing black silhouettes, never a hidden photo fallback.
         mask = np.asarray(image.convert("L")) < threshold * 255
     elif method == "grabcut":
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError("GrabCut에 필요한 OpenCV를 불러오지 못했습니다. U²-Net 또는 Binary 추출을 사용하십시오.") from exc
         rgb = rgba[..., :3].copy()
         h, w = rgb.shape[:2]
         gc = np.full((h, w), cv2.GC_PR_BGD, dtype=np.uint8)
