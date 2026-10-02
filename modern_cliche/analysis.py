@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 from scipy import ndimage as ndi
 from scipy.spatial.distance import cdist
-from sklearn.cluster import KMeans
+from sklearn.cluster import HDBSCAN, KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, silhouette_samples, adjusted_rand_score
 from sklearn.preprocessing import StandardScaler
@@ -16,19 +16,22 @@ from skimage.morphology import medial_axis
 
 from .segmentation import signed_distance
 
-FEATURE_NAMES = ["aspect_ratio", "occupancy", "solidity", "eccentricity", "horizontal_symmetry",
-                 "vertical_symmetry", "compactness", "holes", "skeleton_endpoints",
-                 "branch_regions", "mean_radius", "radius_variation"]
-FEATURE_LABELS = ["가로/세로 비율", "영역 점유율", "볼록 외곽 대비 충실도", "길쭉한 정도", "좌우 대칭도",
-                  "상하 대칭도", "둘레의 복잡도", "구멍 수", "중심선 끝점 수", "분기 영역 수",
-                  "평균 내부 반경", "내부 반경 변동"]
+FEATURE_NAMES = [
+    "aspect_ratio", "occupancy", "solidity", "eccentricity", "horizontal_symmetry",
+    "vertical_symmetry", "compactness", "holes", "skeleton_endpoints",
+    "branch_regions", "mean_radius", "radius_variation",
+]
+FEATURE_LABELS = [
+    "width / height", "foreground occupancy", "convex solidity", "elongation",
+    "left-right symmetry", "top-bottom symmetry", "boundary complexity", "holes",
+    "skeleton endpoints", "skeleton branch regions", "mean internal radius", "radius variation",
+]
 
 
 def field_validation(fields: np.ndarray, seed=17) -> dict:
-    """Repeated holdout reconstruction, compared with a training-mean baseline."""
     n = len(fields)
     if n < 8:
-        return dict(available=False, reason="홀드아웃 비교에는 최소 8장이 필요합니다.")
+        return dict(available=False, reason="At least 8 images are required for holdout reconstruction.")
     flat = fields.reshape(n, -1)
     rng, rows = np.random.default_rng(seed), []
     with threadpool_limits(limits=2):
@@ -40,14 +43,25 @@ def field_validation(fields: np.ndarray, seed=17) -> dict:
             rebuilt = pca.inverse_transform(pca.transform(flat[test]))
             baseline = np.broadcast_to(pca.mean_, rebuilt.shape)
             truth = flat[test]
-            iou = lambda pred: np.count_nonzero((pred > 0) & (truth > 0), axis=1) / np.maximum(1, np.count_nonzero((pred > 0) | (truth > 0), axis=1))
-            rows.append(dict(repeat=repeat + 1, train_n=len(train), test_n=len(test),
-                             field_rmse=float(np.sqrt(np.mean((rebuilt - truth) ** 2))),
-                             mean_baseline_rmse=float(np.sqrt(np.mean((baseline - truth) ** 2))),
-                             mask_iou=float(iou(rebuilt).mean()), mean_baseline_iou=float(iou(baseline).mean())))
-    return dict(available=True, repeats=rows, mean_iou=float(np.mean([row["mask_iou"] for row in rows])),
-                mean_baseline_iou=float(np.mean([row["mean_baseline_iou"] for row in rows])),
-                interpretation="이미지 표본 내 재구성 비교입니다. 대상 인식·3D 정확도·외부 데이터 일반화를 측정하지 않습니다.")
+            iou = lambda pred: np.count_nonzero((pred > 0) & (truth > 0), axis=1) / np.maximum(
+                1, np.count_nonzero((pred > 0) | (truth > 0), axis=1)
+            )
+            rows.append(dict(
+                repeat=repeat + 1,
+                train_n=len(train),
+                test_n=len(test),
+                field_rmse=float(np.sqrt(np.mean((rebuilt - truth) ** 2))),
+                mean_baseline_rmse=float(np.sqrt(np.mean((baseline - truth) ** 2))),
+                mask_iou=float(iou(rebuilt).mean()),
+                mean_baseline_iou=float(iou(baseline).mean()),
+            ))
+    return dict(
+        available=True,
+        repeats=rows,
+        mean_iou=float(np.mean([row["mask_iou"] for row in rows])),
+        mean_baseline_iou=float(np.mean([row["mean_baseline_iou"] for row in rows])),
+        interpretation="Within-sample silhouette reconstruction only; not a measure of recognition or 3D accuracy.",
+    )
 
 
 def shape_features(mask: np.ndarray) -> np.ndarray:
@@ -59,28 +73,35 @@ def shape_features(mask: np.ndarray) -> np.ndarray:
     _, branches = ndi.label(skeleton & (degree >= 3))
     radii = distance[skeleton]
     symmetry = lambda other: np.count_nonzero(mask & other) / max(1, np.count_nonzero(mask | other))
-    return np.array([(x1 - x0) / max(1, y1 - y0), mask.mean(), props.solidity, props.eccentricity,
-                     symmetry(np.fliplr(mask)), symmetry(np.flipud(mask)),
-                     perimeter(mask) ** 2 / max(1, 4 * np.pi * mask.sum()),
-                     max(0, 1 - euler_number(mask, connectivity=2)), endpoints, branches,
-                     np.mean(radii) / mask.shape[0], np.std(radii) / max(.1, np.mean(radii))], dtype=float)
+    return np.array([
+        (x1 - x0) / max(1, y1 - y0), mask.mean(), props.solidity, props.eccentricity,
+        symmetry(np.fliplr(mask)), symmetry(np.flipud(mask)),
+        perimeter(mask) ** 2 / max(1, 4 * np.pi * mask.sum()),
+        max(0, 1 - euler_number(mask, connectivity=2)), endpoints, branches,
+        np.mean(radii) / mask.shape[0], np.std(radii) / max(.1, np.mean(radii)),
+    ], dtype=float)
 
 
 def fit_field_model(masks: list[np.ndarray]) -> dict:
     fields = np.stack([signed_distance(mask) for mask in masks])
     flat = fields.reshape(len(fields), -1)
     if len(fields) < 2 or np.max(np.std(flat, axis=0)) < 1e-6:
-        return dict(mean=flat.mean(axis=0).reshape(masks[0].shape),
-                    components=np.empty((0, *masks[0].shape)), scores=np.empty((len(fields), 0)),
-                    std=np.empty(0), explained=np.empty(0), retained_variance=0.0, fields=fields)
+        return dict(
+            mean=flat.mean(axis=0).reshape(masks[0].shape),
+            components=np.empty((0, *masks[0].shape)),
+            scores=np.empty((len(fields), 0)), std=np.empty(0), explained=np.empty(0),
+            retained_variance=0.0, fields=fields,
+        )
     pca = PCA(n_components=min(len(fields) - 1, 12), svd_solver="full")
     scores = pca.fit_transform(flat)
     valid = pca.explained_variance_ > 1e-8
-    return dict(mean=pca.mean_.reshape(masks[0].shape),
-                components=pca.components_[valid].reshape(-1, *masks[0].shape),
-                scores=scores[:, valid], std=np.sqrt(pca.explained_variance_[valid]),
-                explained=pca.explained_variance_ratio_[valid],
-                retained_variance=float(pca.explained_variance_ratio_[valid].sum()), fields=fields)
+    return dict(
+        mean=pca.mean_.reshape(masks[0].shape),
+        components=pca.components_[valid].reshape(-1, *masks[0].shape),
+        scores=scores[:, valid], std=np.sqrt(pca.explained_variance_[valid]),
+        explained=pca.explained_variance_ratio_[valid],
+        retained_variance=float(pca.explained_variance_ratio_[valid].sum()), fields=fields,
+    )
 
 
 @lru_cache(maxsize=2)
@@ -103,7 +124,6 @@ def visual_embeddings(images, masks, kind="dino", query=""):
     from PIL import Image
     processor, model = load_visual_model(kind)
     torch.set_num_threads(2)
-    # Foreground-only crops prevent a scene/background from becoming the dominant grouping cue.
     crops = []
     for image, mask in zip(images, masks):
         rgb = np.asarray(image.convert("RGB")).copy()
@@ -129,110 +149,208 @@ def visual_embeddings(images, masks, kind="dino", query=""):
     return matrix, None
 
 
+def _manual_kmeans(matrix: np.ndarray, seed: int, k: int) -> dict:
+    n = len(matrix)
+    with threadpool_limits(limits=2):
+        km = KMeans(k, n_init=16, random_state=seed).fit(matrix)
+    labels = km.labels_
+    if len(np.unique(labels)) != k or min(np.bincount(labels)) < 2:
+        raise ValueError("The requested cluster count does not produce usable groups.")
+    silhouette = float(silhouette_score(matrix, labels))
+    rng, repeats = np.random.default_rng(seed), []
+    for trial in range(8):
+        take = rng.choice(n, max(k + 1, round(n * .8)), replace=False)
+        with threadpool_limits(limits=2):
+            sub = KMeans(k, n_init=6, random_state=seed + trial + 1).fit(matrix[take])
+        repeats.append(adjusted_rand_score(labels[take], sub.labels_))
+    stability = float(np.mean(repeats))
+    return dict(
+        labels=labels,
+        candidates=[dict(method="kmeans", k=k, silhouette=silhouette, stability=stability,
+                         coverage=1.0, outliers=0, minimum_cluster_size=int(min(np.bincount(labels))))],
+        silhouette=silhouette,
+        stability=stability,
+        confidence=np.ones(n),
+        sample_silhouette=silhouette_samples(matrix, labels),
+        outliers=[],
+        reason="Manual K-Means cluster count.",
+    )
+
+
 def choose_clusters(matrix: np.ndarray, seed=17, requested_k=0) -> dict:
     n = len(matrix)
-    empty = dict(labels=np.zeros(n, dtype=int), candidates=[], silhouette=None, stability=None,
-                 sample_silhouette=np.zeros(n), reason="표본 수 또는 변형이 부족하여 단일 그룹으로 유지했습니다.")
+    empty = dict(
+        labels=np.zeros(n, dtype=int), candidates=[], silhouette=None, stability=None,
+        confidence=np.ones(n), sample_silhouette=np.zeros(n), outliers=[],
+        reason="No stable subgroup structure detected; the cohort is retained as one morphology.",
+    )
     if n < 4 or np.max(np.std(matrix, axis=0)) < 1e-7:
         return empty
-    k_values = [requested_k] if requested_k else range(2, min(6, n // 2) + 1)
-    candidates, partitions = [], {}
-    rng = np.random.default_rng(seed)
-    with threadpool_limits(limits=2):
-        for k in k_values:
-            if not 2 <= k < n:
-                continue
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                km = KMeans(k, n_init=12, random_state=seed).fit(matrix)
-            labels = km.labels_
-            if len(np.unique(labels)) != k or min(np.bincount(labels)) < 2:
-                continue
-            silhouette = float(silhouette_score(matrix, labels))
-            repeats = []
-            for trial in range(8):
-                take = rng.choice(n, max(k + 1, round(n * .8)), replace=False)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    sub = KMeans(k, n_init=5, random_state=seed + trial + 1).fit(matrix[take])
-                repeats.append(adjusted_rand_score(labels[take], sub.labels_))
-            stability = float(np.mean(repeats))
-            candidates.append(dict(k=k, silhouette=silhouette, subsample_ari=stability,
-                                   minimum_cluster_size=int(min(np.bincount(labels)))))
-            partitions[k] = labels
-    if not candidates:
+    if requested_k:
+        if not 2 <= requested_k < n:
+            raise ValueError("Cluster count must be between 2 and N-1.")
+        return _manual_kmeans(matrix, seed, requested_k)
+
+    trials = []
+    fractions = (.05, .08, .12, .16) if n >= 24 else (.18, .25, .33)
+    for fraction in fractions:
+        min_cluster_size = max(3, min(n - 1, int(round(n * fraction))))
+        min_samples = max(2, min_cluster_size // 2)
+        model = HDBSCAN(
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples,
+            metric="euclidean",
+            cluster_selection_method="eom",
+            allow_single_cluster=False,
+        ).fit(matrix)
+        labels = model.labels_.copy()
+        core = labels >= 0
+        unique = np.unique(labels[core])
+        if len(unique) < 2 or core.sum() < max(6, int(round(n * .35))):
+            continue
+        counts = [int(np.sum(labels == label)) for label in unique]
+        if min(counts) < 2:
+            continue
+        silhouette = float(silhouette_score(matrix[core], labels[core]))
+        probabilities = np.asarray(getattr(model, "probabilities_", np.where(core, 1., 0.)), dtype=float)
+        confidence = float(probabilities[core].mean()) if core.any() else 0.
+        coverage = float(core.mean())
+        objective = .55 * max(-1., silhouette) + .25 * coverage + .20 * confidence
+        trials.append(dict(
+            objective=objective, labels=labels, probabilities=probabilities, method="hdbscan",
+            k=len(unique), silhouette=silhouette, stability=confidence, coverage=coverage,
+            outliers=int((~core).sum()), minimum_cluster_size=min(counts),
+            min_cluster_size=min_cluster_size, min_samples=min_samples,
+        ))
+    if not trials:
         return empty
-    selected = max(candidates, key=lambda row: row["silhouette"])
-    # Explicit exploratory thresholds, not statistical significance or automatic semantic labels.
-    if not requested_k and (selected["silhouette"] < .18 or selected["subsample_ari"] < .35):
-        empty.update(candidates=candidates, reason="분리도 또는 반복 안정성이 낮아 단일 그룹으로 유지했습니다.")
+    selected = max(trials, key=lambda row: row["objective"])
+    if selected["silhouette"] < .03 or selected["coverage"] < .4:
+        empty["candidates"] = [
+            {k: v for k, v in row.items() if k not in ("labels", "probabilities", "objective")} for row in trials
+        ]
         return empty
-    labels = partitions[selected["k"]]
-    return dict(labels=labels, candidates=candidates, silhouette=selected["silhouette"],
-                stability=selected["subsample_ari"], sample_silhouette=silhouette_samples(matrix, labels),
-                reason="수동 그룹 수" if requested_k else "실루엣 점수로 선택한 탐색적 그룹")
+
+    labels = selected["labels"]
+    core = labels >= 0
+    sample_scores = np.full(n, -1., dtype=float)
+    if len(np.unique(labels[core])) >= 2:
+        sample_scores[core] = silhouette_samples(matrix[core], labels[core])
+    return dict(
+        labels=labels,
+        candidates=[{k: v for k, v in row.items() if k not in ("labels", "probabilities", "objective")} for row in trials],
+        silhouette=selected["silhouette"], stability=selected["stability"],
+        confidence=selected["probabilities"], sample_silhouette=sample_scores,
+        outliers=np.flatnonzero(~core).tolist(),
+        reason="Automatic HDBSCAN density clustering. Noise points are excluded from morphology groups.",
+    )
+
+
+def _balanced_visual_block(embeddings: np.ndarray) -> np.ndarray:
+    embeddings = np.asarray(embeddings, dtype=float)
+    n = len(embeddings)
+    if n < 3 or np.max(np.std(embeddings, axis=0)) < 1e-9:
+        return np.zeros((n, 0), dtype=float)
+    components = min(16, n - 1, embeddings.shape[1])
+    reduced = PCA(n_components=components, svd_solver="full").fit_transform(embeddings)
+    reduced = StandardScaler().fit_transform(reduced)
+    return reduced / np.sqrt(max(1, reduced.shape[1]))
 
 
 def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, backend="shape", depth_results=None) -> dict:
     if len(masks) < 3:
-        raise ValueError("서로 다른 이미지가 최소 3장 필요합니다. 비교에는 20장 이상을 권장합니다.")
+        raise ValueError("At least 3 distinct images are required; 20 or more are recommended.")
     raw = np.stack([shape_features(mask) for mask in masks])
     standard = StandardScaler().fit_transform(raw)
     model = fit_field_model(masks)
     scores = model["scores"]
-    if embeddings is not None:
-        matrix = np.asarray(embeddings, dtype=float)
-        if matrix.shape[0] != len(masks):
-            raise ValueError("특징 벡터와 이미지 수가 일치하지 않습니다.")
+
+    spatial = scores[:, :6]
+    if spatial.size:
+        spatial = StandardScaler().fit_transform(spatial) / np.sqrt(max(1, spatial.shape[1]))
     else:
-        # Equal total weight to geometry descriptors and spatial signed-distance variation.
-        spatial = scores[:, :6]
-        spatial = spatial / max(1e-8, np.sqrt(np.mean(spatial ** 2)) if spatial.size else 0.)
-        matrix = np.concatenate([standard / np.sqrt(raw.shape[1]), spatial / np.sqrt(max(1, spatial.shape[1]))], axis=1)
+        spatial = np.zeros((len(masks), 0), dtype=float)
+    shape_block = standard / np.sqrt(raw.shape[1])
+    blocks = [shape_block, spatial]
+
+    if embeddings is not None:
+        if np.asarray(embeddings).shape[0] != len(masks):
+            raise ValueError("Visual embedding count does not match image count.")
+        visual = _balanced_visual_block(np.asarray(embeddings, dtype=float))
+        if visual.size:
+            blocks.insert(0, visual)
+        backend = f"{backend}+geometry"
+
     depth_raw, depth_standard = None, None
     if depth_results is not None:
         from .depth import DEPTH_NAMES, DEPTH_LABELS, depth_features
         if len(depth_results) != len(masks):
-            raise ValueError("깊이 결과와 분석 이미지 수가 일치하지 않습니다.")
+            raise ValueError("Depth result count does not match image count.")
         identities = {(r["metadata"]["model_id"], r["metadata"]["revision"], r["metadata"]["scale"]) for r in depth_results}
         if len(identities) != 1:
-            raise ValueError("동일한 깊이 모델과 척도로 분석한 이미지가 필요합니다.")
+            raise ValueError("All images must use the same depth model and scale.")
         depth_raw = np.stack([depth_features(r) for r in depth_results])
         depth_standard = StandardScaler().fit_transform(depth_raw)
-        # Replayed features already contain the saved depth block.
-        if embeddings is None or "+depth" not in backend:
-            block = matrix / max(1e-8, np.sqrt(np.mean(np.sum(matrix ** 2, axis=1))))
-            matrix = np.concatenate([block, depth_standard / np.sqrt(len(DEPTH_NAMES))], axis=1)
-        backend = backend if "+depth" in backend else backend + "+depth"
+        blocks.append(depth_standard / np.sqrt(len(DEPTH_NAMES)))
+        backend += "+depth"
+
+    matrix = np.concatenate([block for block in blocks if block.shape[1]], axis=1)
     clusters = choose_clusters(matrix, seed, requested_k)
     labels = clusters["labels"]
     groups = []
     for label in np.unique(labels):
+        if label < 0:
+            continue
         indices = np.flatnonzero(labels == label)
         pairwise = cdist(matrix[indices], matrix[indices])
         medoid = int(indices[np.argmin(pairwise.sum(axis=1))])
         differences = standard[indices].mean(axis=0)
-        rules = [dict(feature=FEATURE_NAMES[j], label=FEATURE_LABELS[j],
-                      standardised_difference=float(differences[j]),
-                      group_mean=float(raw[indices, j].mean()), dataset_mean=float(raw[:, j].mean()))
-                 for j in np.argsort(np.abs(differences))[-3:][::-1]]
-        groups.append(dict(label=int(label), indices=indices.tolist(), medoid=medoid,
-                           descriptive_rules=rules, model=fit_field_model([masks[i] for i in indices])))
+        rules = [dict(
+            feature=FEATURE_NAMES[j], label=FEATURE_LABELS[j],
+            standardised_difference=float(differences[j]),
+            group_mean=float(raw[indices, j].mean()), dataset_mean=float(raw[:, j].mean()),
+        ) for j in np.argsort(np.abs(differences))[-3:][::-1]]
+        group = dict(
+            label=int(label), indices=indices.tolist(), medoid=medoid,
+            descriptive_rules=rules, model=fit_field_model([masks[i] for i in indices]),
+        )
         if depth_raw is not None:
             differences = depth_standard[indices].mean(axis=0)
-            groups[-1]["depth_rules"] = [dict(feature=DEPTH_NAMES[j], label=DEPTH_LABELS[j],
-                standardised_difference=float(differences[j]), group_mean=float(depth_raw[indices, j].mean()),
-                dataset_mean=float(depth_raw[:, j].mean())) for j in np.argsort(np.abs(differences))[-3:][::-1]]
+            group["depth_rules"] = [dict(
+                feature=DEPTH_NAMES[j], label=DEPTH_LABELS[j],
+                standardised_difference=float(differences[j]),
+                group_mean=float(depth_raw[indices, j].mean()), dataset_mean=float(depth_raw[:, j].mean()),
+            ) for j in np.argsort(np.abs(differences))[-3:][::-1]]
+        groups.append(group)
+
+    if not groups:
+        labels = np.zeros(len(masks), dtype=int)
+        clusters["labels"] = labels
+        clusters["outliers"] = []
+        clusters["confidence"] = np.ones(len(masks))
+        indices = np.arange(len(masks))
+        pairwise = cdist(matrix, matrix)
+        medoid = int(np.argmin(pairwise.sum(axis=1)))
+        groups = [dict(label=0, indices=indices.tolist(), medoid=medoid, descriptive_rules=[], model=fit_field_model(masks))]
+
     if np.max(np.std(matrix, axis=0)) < 1e-8:
         projection = np.zeros((len(matrix), 2))
     else:
         projection = PCA(n_components=min(2, matrix.shape[1], len(matrix) - 1), svd_solver="full").fit_transform(matrix)
     if projection.shape[1] < 2:
         projection = np.pad(projection, ((0, 0), (0, 2 - projection.shape[1])))
-    distance = np.zeros(len(masks))
+
+    distance = np.zeros(len(masks), dtype=float)
+    centers = []
     for group in groups:
         indices = group["indices"]
-        distance[indices] = np.linalg.norm(matrix[indices] - matrix[indices].mean(axis=0), axis=1)
+        center = matrix[indices].mean(axis=0)
+        centers.append(center)
+        distance[indices] = np.linalg.norm(matrix[indices] - center, axis=1)
+    outliers = np.flatnonzero(labels < 0)
+    if len(outliers) and centers:
+        distance[outliers] = cdist(matrix[outliers], np.stack(centers)).min(axis=1)
+
     correlations = []
     for axis in range(min(4, scores.shape[1])):
         values = []
@@ -241,10 +359,13 @@ def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, ba
             values.append(correlation)
         order = np.argsort(np.abs(values))[-3:][::-1]
         correlations.append([dict(label=FEATURE_LABELS[j], correlation=values[j]) for j in order])
-    return dict(raw_features=raw, features=matrix, labels=labels, groups=groups, model=model,
-                projection=projection, distance=distance, clusters=clusters,
-                backend=backend, correlations=correlations, seed=seed,
-                depth_features=depth_raw, validation=field_validation(model["fields"], seed))
+
+    return dict(
+        raw_features=raw, features=matrix, labels=labels, groups=groups, model=model,
+        projection=projection, distance=distance, clusters=clusters, backend=backend,
+        correlations=correlations, seed=seed, depth_features=depth_raw,
+        validation=field_validation(model["fields"], seed),
+    )
 
 
 def synthesize_field(analysis: dict, mode: str, group_a=0, group_b=0, mix=.5,
@@ -260,20 +381,19 @@ def synthesize_field(analysis: dict, mode: str, group_a=0, group_b=0, mix=.5,
         recipe = dict(mode=mode, group_a=group_a, group_b=group_b, mix=float(mix),
                       input_indices=sorted(set(a["indices"] + b["indices"])))
     elif mode == "variation":
-        model = a["model"]
-        coefficients = list(coefficients or [])[:len(model["components"])]
-        field = model["mean"].copy()
+        local = a["model"]
+        coefficients = list(coefficients or [])[:len(local["components"])]
+        field = local["mean"].copy()
         for index, value in enumerate(coefficients):
-            field += float(value) * model["std"][index] * model["components"][index]
+            field += float(value) * local["std"][index] * local["components"][index]
         recipe = dict(mode=mode, group_a=group_a, coefficients_sigma=coefficients,
-                      input_indices=a["indices"],
-                      extrapolation=any(abs(value) > 2 for value in coefficients))
+                      input_indices=a["indices"], extrapolation=any(abs(value) > 2 for value in coefficients))
     else:
-        raise ValueError("지원하지 않는 형상 생성 방식입니다.")
+        raise ValueError("Unsupported morphology synthesis mode.")
     mask = field > 0
     mask[:2] = mask[-2:] = False
     mask[:, :2] = mask[:, -2:] = False
     if mask.sum() < 16:
-        raise ValueError("이 조건에서는 유효한 형상이 없습니다. 변형량 또는 보간 비율을 줄이십시오.")
+        raise ValueError("This parameter set does not produce a usable morphology.")
     recipe["components_2d"] = int(ndi.label(mask)[1])
     return mask, recipe
