@@ -1,0 +1,35 @@
+name: Collector smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/dataset_collector/**'
+      - 'pages/1_Dataset_Collector.py'
+      - '.github/workflows/collector-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install collector requirements
+        run: python -m pip install -r tools/dataset_collector/requirements.txt
+      - name: Compile
+        run: python -m py_compile pages/1_Dataset_Collector.py tools/dataset_collector/app.py tools/dataset_collector/collector.py
+      - name: Start Streamlit collector
+        run: |
+          nohup python -m streamlit run tools/dataset_collector/app.py --server.headless true --server.port 8501 > /tmp/collector.log 2>&1 &
+          echo $! > /tmp/collector.pid
+      - name: Wait for health endpoint
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8501/_stcore/health; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/collector.log
+          exit 1
