@@ -1,0 +1,5 @@
+streamlit>=1.49,<2
+pandas>=2.2,<4
+Pillow>=12.1,<13
+requests>=2.31,<3
+ddgs>=9.13,<10
