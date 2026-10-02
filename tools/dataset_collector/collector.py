@@ -95,14 +95,9 @@ def search_ddgs(query: str, max_results: int, *, region: str = "us-en", backend:
         from ddgs import DDGS
     except ImportError as exc:
         raise RuntimeError("DDGS is not installed. Run: pip install -r requirements.txt") from exc
-
     rows = DDGS(timeout=15).images(
-        query=query,
-        region=region,
-        safesearch="moderate",
-        max_results=max_results,
-        backend=backend,
-        type_image="photo" if photo_only else None,
+        query=query, region=region, safesearch="moderate", max_results=max_results,
+        backend=backend, type_image="photo" if photo_only else None,
         license_image=license_filter,
     )
     out: list[Candidate] = []
@@ -111,14 +106,11 @@ def search_ddgs(query: str, max_results: int, *, region: str = "us-en", backend:
         if not url:
             continue
         out.append(Candidate(
-            source=f"ddgs:{row.get('source') or backend}",
-            query=query,
-            title=str(row.get("title") or ""),
-            image_url=url,
+            source=f"ddgs:{row.get('source') or backend}", query=query,
+            title=str(row.get("title") or ""), image_url=url,
             thumbnail_url=str(row.get("thumbnail") or ""),
             page_url=str(row.get("url") or ""),
-            width=_int_or_none(row.get("width")),
-            height=_int_or_none(row.get("height")),
+            width=_int_or_none(row.get("width")), height=_int_or_none(row.get("height")),
             provider=str(row.get("source") or backend),
         ))
     return out
@@ -134,8 +126,7 @@ def search_wikimedia(query: str, max_results: int, session: requests.Session | N
             "action": "query", "format": "json", "formatversion": 2,
             "generator": "search", "gsrsearch": query, "gsrnamespace": 6,
             "gsrlimit": min(50, max_results - len(results)),
-            "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata",
-            "iiurlwidth": 512,
+            "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 512,
         }
         params.update(continuation)
         response = session.get(WIKIMEDIA_ENDPOINT, params=params, timeout=25)
@@ -154,19 +145,13 @@ def search_wikimedia(query: str, max_results: int, session: requests.Session | N
                 continue
             ext = info.get("extmetadata") or {}
             results.append(Candidate(
-                source="wikimedia",
-                query=query,
-                title=str(page.get("title") or ""),
-                image_url=str(info.get("url") or ""),
-                thumbnail_url=str(info.get("thumburl") or ""),
-                page_url=str(info.get("descriptionurl") or ""),
-                width=_int_or_none(info.get("width")),
+                source="wikimedia", query=query, title=str(page.get("title") or ""),
+                image_url=str(info.get("url") or ""), thumbnail_url=str(info.get("thumburl") or ""),
+                page_url=str(info.get("descriptionurl") or ""), width=_int_or_none(info.get("width")),
                 height=_int_or_none(info.get("height")),
                 license=_meta_value(ext, "LicenseShortName") or _meta_value(ext, "UsageTerms"),
-                license_url=_meta_value(ext, "LicenseUrl"),
-                creator=_meta_value(ext, "Artist"),
-                provider="Wikimedia Commons",
-                source_id=str(page.get("pageid") or ""),
+                license_url=_meta_value(ext, "LicenseUrl"), creator=_meta_value(ext, "Artist"),
+                provider="Wikimedia Commons", source_id=str(page.get("pageid") or ""),
             ))
             if len(results) >= max_results:
                 break
@@ -197,13 +182,11 @@ def search_openverse(query: str, max_results: int, session: requests.Session | N
             if not url:
                 continue
             out.append(Candidate(
-                source="openverse", query=query, title=str(row.get("title") or ""),
-                image_url=url, thumbnail_url=str(row.get("thumbnail") or ""),
-                page_url=str(row.get("foreign_landing_url") or ""),
+                source="openverse", query=query, title=str(row.get("title") or ""), image_url=url,
+                thumbnail_url=str(row.get("thumbnail") or ""), page_url=str(row.get("foreign_landing_url") or ""),
                 width=_int_or_none(row.get("width")), height=_int_or_none(row.get("height")),
                 license=str(row.get("license") or ""), license_url=str(row.get("license_url") or ""),
-                creator=str(row.get("creator") or ""),
-                provider=str(row.get("provider") or row.get("source") or "Openverse"),
+                creator=str(row.get("creator") or ""), provider=str(row.get("provider") or row.get("source") or "Openverse"),
                 source_id=str(row.get("id") or ""),
             ))
             if len(out) >= max_results:
@@ -235,10 +218,11 @@ def dedupe_candidates(candidates: Iterable[Candidate]) -> list[Candidate]:
     return out
 
 
-def candidate_passes_dimensions(item: Candidate, min_width: int, min_height: int, allow_unknown: bool) -> bool:
+def candidate_passes_dimensions(item: Candidate, min_short_edge: int, min_long_edge: int, allow_unknown: bool) -> bool:
     if item.width is None or item.height is None:
         return allow_unknown
-    return item.width >= min_width and item.height >= min_height
+    short_edge, long_edge = sorted((item.width, item.height))
+    return short_edge >= min_short_edge and long_edge >= min_long_edge
 
 
 def dhash(image: Image.Image, hash_size: int = 8) -> int:
@@ -297,7 +281,7 @@ def _fetch_bytes(session: requests.Session, url: str, max_bytes: int, retries: i
     raise RuntimeError(str(last_error or "download failed"))
 
 
-def download_dataset(candidates: list[Candidate], output_root: str | Path, *, min_width: int = 800, min_height: int = 600, max_file_mb: int = 25, near_duplicate_distance: int = 3, progress: Callable[[int, int, str], None] | None = None) -> tuple[Path, list[dict]]:
+def download_dataset(candidates: list[Candidate], output_root: str | Path, *, min_short_edge: int = 700, min_long_edge: int = 1200, max_file_mb: int = 25, near_duplicate_distance: int = 3, progress: Callable[[int, int, str], None] | None = None) -> tuple[Path, list[dict]]:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     dataset_dir = Path(output_root) / f"dataset_{stamp}"
     image_dir = dataset_dir / "images"
@@ -326,7 +310,8 @@ def download_dataset(candidates: list[Candidate], output_root: str | Path, *, mi
             with Image.open(io.BytesIO(raw)) as image:
                 width, height = image.size
                 fmt = image.format
-                if width < min_width or height < min_height:
+                short_edge, long_edge = sorted((width, height))
+                if short_edge < min_short_edge or long_edge < min_long_edge:
                     base.update({"status": "rejected_low_resolution", "width_actual": width, "height_actual": height, "sha256": sha})
                     metadata.append(base)
                     continue
@@ -360,7 +345,7 @@ def download_dataset(candidates: list[Candidate], output_root: str | Path, *, mi
         "duplicate_near": sum(1 for r in metadata if r["status"] == "duplicate_near"),
         "rejected_low_resolution": sum(1 for r in metadata if r["status"] == "rejected_low_resolution"),
         "failed": sum(1 for r in metadata if r["status"] == "failed"),
-        "settings": {"min_width": min_width, "min_height": min_height, "max_file_mb": max_file_mb, "near_duplicate_distance": near_duplicate_distance},
+        "settings": {"min_short_edge": min_short_edge, "min_long_edge": min_long_edge, "max_file_mb": max_file_mb, "near_duplicate_distance": near_duplicate_distance},
     }
     dataset_dir.joinpath("summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return dataset_dir, metadata
