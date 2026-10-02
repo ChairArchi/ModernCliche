@@ -74,7 +74,7 @@ def test_depth_changes_sorting_even_with_identical_silhouettes():
     assert result["backend"] == "shape+depth"
     assert np.std(result["features"], axis=0).max() > 0
     assert any(g.get("depth_rules") for g in result["groups"])
-    with pytest.raises(ValueError, match="동일한"):
+    with pytest.raises(ValueError, match="same depth model"):
         mixed = fixture_depth(); mixed["metadata"]["model_id"] = "other-model"
         analyse([mask] * 3, depth_results=[results[0], results[1], mixed])
 
