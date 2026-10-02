@@ -6,7 +6,6 @@ requests>=2.31,<3
 scikit-learn>=1.5,<2
 scikit-image>=0.26,<0.27
 scipy>=1.16.3,<2
-opencv-python-headless>=4.10,<5
 rembg[cpu]>=2.0.85,<3
 trimesh>=4.0,<5
 plotly>=6.0,<7
@@ -29,5 +28,7 @@ matplotlib>=3.9,<4
 huggingface-hub>=0.34,<1
 
 # Pin the tested MoGe-2 runtime, before GPU-only MoGe-3 dependencies.
+# MoGe supplies opencv-python; do not install opencv-python-headless alongside it,
+# because both packages own the same cv2 module files and may conflict under uv.
 gradio>=6.2,<6.11
 moge @ git+https://github.com/microsoft/MoGe.git@925b8ed835a7a9cdb7578ba15c658a0afc969030
