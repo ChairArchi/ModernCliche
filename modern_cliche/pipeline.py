@@ -20,7 +20,7 @@ def prepare(samples: list[Sample], method="u2net", threshold=.5, size=96, overri
             if sample.id in overrides:
                 raw = np.asarray(overrides[sample.id], dtype=bool)
                 if raw.shape != (sample.image.height, sample.image.width):
-                    raise ValueError("수동 마스크와 원본 이미지의 크기가 다릅니다.")
+                    raise ValueError("Manual mask dimensions do not match the source image.")
                 info = dict(method="manual-mask", needs_review=False, foreground_fraction=float(raw.mean()))
             else:
                 raw, info = extract_mask(sample.image, method, threshold)
@@ -53,22 +53,22 @@ def subset(prepared: dict, indices: list[int]) -> dict:
 
 
 def load_experiment(raw: bytes) -> tuple[list[Sample], dict, dict]:
-    if len(raw) > 80_000_000:
-        raise ValueError("실험 ZIP은 80MB 이하로 업로드하십시오.")
+    if len(raw) > 220_000_000:
+        raise ValueError("Experiment ZIP must be 220 MB or smaller.")
     with zipfile.ZipFile(BytesIO(raw)) as archive:
-        if sum(info.file_size for info in archive.infolist()) > 180_000_000:
-            raise ValueError("압축 해제 크기가 제한을 초과했습니다.")
+        if sum(info.file_size for info in archive.infolist()) > 550_000_000:
+            raise ValueError("Expanded experiment size exceeds the safety limit.")
         manifest = json.loads(archive.read("run.json"))
         with np.load(BytesIO(archive.read("analysis.npz")), allow_pickle=False) as arrays:
             manifest["_saved_features"] = arrays["features"].copy()
         entries = manifest.get("samples", [])
-        if not 1 <= len(entries) <= 80:
-            raise ValueError("실험에는 1~80장의 이미지가 필요합니다.")
+        if not 1 <= len(entries) <= 240:
+            raise ValueError("An experiment must contain between 1 and 240 images.")
         samples, overrides = [], {}
         for entry in entries:
             sid = entry["id"]
             if not isinstance(sid, str) or not sid.isalnum() or len(sid) > 64:
-                raise ValueError("이미지 ID가 올바르지 않습니다.")
+                raise ValueError("Invalid image ID in experiment archive.")
             decoded = decode_image(archive.read(f"images/{sid}.png"), entry.get("metadata", {}))
             sample = Sample(sid, decoded.image, decoded.metadata)
             samples.append(sample)
@@ -80,7 +80,7 @@ def load_experiment(raw: bytes) -> tuple[list[Sample], dict, dict]:
             for sample in samples:
                 depth = decode_depth(archive.read(f"depth/{sample.id}.npz"))
                 if depth["metadata"].get("model_id") != manifest["depth_estimation"]["model_id"]:
-                    raise ValueError("실험에 서로 다른 깊이 모델의 결과가 포함되어 있습니다.")
+                    raise ValueError("Experiment contains mixed depth models.")
                 manifest["_saved_depth"][sample.id] = depth
         if manifest.get("selected_depth"):
             from .depth import decode_depth
