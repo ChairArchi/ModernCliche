@@ -1,0 +1,1 @@
+"""Statistical visible-surface aggregation."""
