@@ -3,17 +3,42 @@ on:
   push:
     branches: [main]
   pull_request:
+
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
-        python: ['3.11', '3.12']
+        python: ['3.11', '3.12', '3.14']
     steps:
       - uses: actions/checkout@v4
+      - name: Install Streamlit Cloud system packages
+        run: |
+          sudo apt-get update
+          xargs -a packages.txt sudo apt-get install -y
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python -m pip install -r requirements-dev.txt
-      - run: python -m pytest -q
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Smoke-test Streamlit startup
+        run: |
+          python -m streamlit run streamlit_app.py --server.headless=true --server.port=8501 > /tmp/streamlit.log 2>&1 &
+          APP_PID=$!
+          trap 'kill $APP_PID || true' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8501/_stcore/health | grep -q ok; then
+              exit 0
+            fi
+            if ! kill -0 $APP_PID 2>/dev/null; then
+              cat /tmp/streamlit.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/streamlit.log
+          exit 1
