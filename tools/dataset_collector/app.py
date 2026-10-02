@@ -53,13 +53,13 @@ with st.sidebar:
     max_per_query = st.number_input("Results / source / query", 10, 500, 100, 10)
 
     st.header("Candidate filter")
-    min_w = st.number_input("Minimum width", 0, 10000, 1000, 100)
-    min_h = st.number_input("Minimum height", 0, 10000, 700, 100)
+    min_short = st.number_input("Minimum short edge", 0, 10000, 700, 100)
+    min_long = st.number_input("Minimum long edge", 0, 10000, 1200, 100)
     allow_unknown = st.checkbox("Keep unknown dimensions", value=True)
 
     st.header("Download validation")
-    real_min_w = st.number_input("Actual minimum width", 0, 10000, 1200, 100)
-    real_min_h = st.number_input("Actual minimum height", 0, 10000, 800, 100)
+    real_min_short = st.number_input("Actual minimum short edge", 0, 10000, 800, 100)
+    real_min_long = st.number_input("Actual minimum long edge", 0, 10000, 1400, 100)
     near_dup = st.slider("Near-duplicate tolerance", 0, 12, 3)
     max_file_mb = st.number_input("Maximum file size (MB)", 1, 100, 25, 1)
 
@@ -120,7 +120,7 @@ if st.button("Search candidates", type="primary", use_container_width=True):
 candidates: list[Candidate] = st.session_state.candidates
 if candidates:
     raw_count = len(candidates)
-    filtered = [c for c in candidates if candidate_passes_dimensions(c, int(min_w), int(min_h), allow_unknown)]
+    filtered = [c for c in candidates if candidate_passes_dimensions(c, int(min_short), int(min_long), allow_unknown)]
     domains = sorted({c.source for c in filtered})
     selected_sources = st.multiselect("Keep sources", domains, default=domains)
     filtered = [c for c in filtered if c.source in selected_sources]
@@ -159,7 +159,7 @@ if candidates:
             line = st.empty()
             def report(done: int, total: int, label: str) -> None:
                 p.progress(done / max(total, 1)); line.write(f"{done:,} / {total:,} — {label[:120]}")
-            dataset_dir, metadata = download_dataset(to_download, OUTPUT_DIR, min_width=int(real_min_w), min_height=int(real_min_h), max_file_mb=int(max_file_mb), near_duplicate_distance=int(near_dup), progress=report)
+            dataset_dir, metadata = download_dataset(to_download, OUTPUT_DIR, min_short_edge=int(real_min_short), min_long_edge=int(real_min_long), max_file_mb=int(max_file_mb), near_duplicate_distance=int(near_dup), progress=report)
             zip_path = make_zip(dataset_dir)
             st.session_state.last_dataset = (str(dataset_dir), str(zip_path))
             ok = sum(1 for r in metadata if r["status"] == "downloaded")
