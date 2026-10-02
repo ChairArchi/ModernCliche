@@ -39,17 +39,17 @@ def extract_mask(image: Image.Image, method: str = "u2net", threshold: float = 0
         cv2.grabCut(rgb, gc, None, np.zeros((1, 65)), np.zeros((1, 65)), 4, cv2.GC_INIT_WITH_MASK)
         mask = np.isin(gc, (cv2.GC_FGD, cv2.GC_PR_FGD))
     else:
-        raise ValueError("알 수 없는 배경 분리 방법이야.")
+        raise ValueError("지원하지 않는 배경 분리 방법입니다.")
     mask = morphology.remove_small_objects(mask.astype(bool), max_size=max(8, int(mask.size * .0005)))
     labels, count = ndi.label(mask)
     if not count:
-        raise ValueError("대상 영역을 추출하지 못했어. 분리 방법이나 마스크를 바꿔줘.")
+        raise ValueError("대상 영역을 추출하지 못했습니다. 분리 방법 또는 마스크를 변경하십시오.")
     sizes = np.bincount(labels.ravel())
     sizes[0] = 0
     largest = labels == sizes.argmax()
     fraction = float(largest.mean())
     if fraction < .005 or fraction > .95:
-        raise ValueError(f"추출 영역 비율 {fraction:.1%}: 빈 영역 또는 배경 전체일 가능성이 커.")
+        raise ValueError(f"추출 영역 비율 {fraction:.1%}: 빈 영역 또는 배경 전체일 가능성이 있습니다.")
     border = np.concatenate([largest[0], largest[-1], largest[:, 0], largest[:, -1]])
     return largest, dict(method=used, foreground_fraction=fraction,
                          discarded_fraction=float((mask.sum() - largest.sum()) / max(1, mask.sum())),
@@ -60,7 +60,7 @@ def extract_mask(image: Image.Image, method: str = "u2net", threshold: float = 0
 def normalise_mask(mask: np.ndarray, size: int = 96) -> np.ndarray:
     ys, xs = np.where(mask)
     if not len(xs):
-        raise ValueError("빈 마스크는 분석할 수 없어.")
+        raise ValueError("빈 마스크는 분석할 수 없습니다.")
     crop = mask[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     scale = (size - 12) / max(crop.shape)
     dimensions = (max(1, round(crop.shape[1] * scale)), max(1, round(crop.shape[0] * scale)))

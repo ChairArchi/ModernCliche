@@ -14,13 +14,13 @@ def lift_to_mesh(mask: np.ndarray, depth_scale: float = 1., size_mm: float = 120
     not recovered geometry, an image-intensity height map, or a pretrained 3D decoder.
     """
     if not .3 <= depth_scale <= 2.:
-        raise ValueError("깊이 가정은 0.3~2.0 사이로 설정해줘.")
+        raise ValueError("깊이 가정은 0.3~2.0 범위로 설정하십시오.")
     if not 10 <= size_mm <= 1000:
-        raise ValueError("모델 크기는 10~1000mm 사이로 설정해줘.")
+        raise ValueError("모델 크기는 10~1000mm 범위로 설정하십시오.")
     skeleton, distance = medial_axis(mask, return_distance=True, rng=17)
     medial_points = np.argwhere(skeleton)
     if not len(medial_points):
-        raise ValueError("중심선을 추출할 수 없어.")
+        raise ValueError("중심선을 추출할 수 없습니다.")
     # Discrete thinning may omit extremities. Retain a maximal inscribed-disc cover
     # of all measured foreground pixels, removing analytically contained discs.
     candidates = np.argwhere(mask)
@@ -60,7 +60,7 @@ def lift_to_mesh(mask: np.ndarray, depth_scale: float = 1., size_mm: float = 120
     mesh = trimesh.Trimesh(vertices, faces, process=True)
     mesh.fix_normals(multibody=True)
     if not mesh.is_watertight:
-        raise ValueError("닫힌 표면을 만들지 못했어. 마스크의 얇은 부분이나 분리된 영역을 확인해줘.")
+        raise ValueError("닫힌 표면을 생성하지 못했습니다. 마스크의 얇은 부분 또는 분리된 영역을 확인하십시오.")
     projected = volume[2:h + 2, 2:w + 2, :].max(axis=2) >= 0
     iou = np.count_nonzero(projected & mask) / max(1, np.count_nonzero(projected | mask))
     return mesh, dict(method="maximal-inscribed-disc-ellipsoid-union", depth_prior="isotropic_local_radius",

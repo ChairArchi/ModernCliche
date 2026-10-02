@@ -24,10 +24,10 @@ class Sample:
 
 def decode_image(raw: bytes, metadata: dict | None = None) -> Sample:
     if len(raw) > 12_000_000:
-        raise ValueError("이미지는 12MB 이하로 올려줘.")
+        raise ValueError("이미지는 12MB 이하로 업로드하십시오.")
     with Image.open(BytesIO(raw)) as im:
         if im.width * im.height > 30_000_000:
-            raise ValueError("이미지 해상도가 너무 커. 3천만 픽셀 이하로 줄여줘.")
+            raise ValueError("이미지 해상도가 제한을 초과했습니다. 3천만 픽셀 이하로 줄이십시오.")
         image = ImageOps.exif_transpose(im).convert("RGBA")
         image.thumbnail((768, 768))
     return Sample(sha256(raw).hexdigest()[:16], image, metadata or {})
@@ -40,7 +40,7 @@ def clean_text(value: str) -> str:
 def search_images(query: str, limit: int = 36, provider: str = "commons") -> tuple[list[dict], str]:
     query = ALIASES.get(query.strip(), query.strip())
     if not query:
-        raise ValueError("검색할 대상을 입력해줘.")
+        raise ValueError("검색할 대상을 입력하십시오.")
     limit = max(1, min(int(limit), 80))
     items: list[dict] = []
     if provider == "commons":
@@ -90,7 +90,7 @@ def search_images(query: str, limit: int = 36, provider: str = "commons") -> tup
             if len(items) >= limit or not results:
                 break
     else:
-        raise ValueError("알 수 없는 검색 제공자야.")
+        raise ValueError("지원하지 않는 검색 제공자입니다.")
     # Search engines provide retrieval relevance, not verified category membership.
     return items[:limit], query
 

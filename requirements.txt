@@ -10,3 +10,14 @@ opencv-python-headless>=4.10,<5
 rembg[cpu]>=2.0.85,<3
 trimesh>=4.0,<5
 plotly>=6.0,<7
+
+# Embedded CPU depth estimation (Linux deployment).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.4,<3
+transformers>=4.45,<5
+matplotlib>=3.9,<4
+huggingface-hub>=0.34,<1
+# Pin the tested MoGe-2 runtime, before GPU-only MoGe-3 dependencies.
+gradio>=6.2,<6.11
+opencv-python>=4.10,<5
+moge @ git+https://github.com/microsoft/MoGe.git@925b8ed835a7a9cdb7578ba15c658a0afc969030

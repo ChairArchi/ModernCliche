@@ -28,7 +28,7 @@ def field_validation(fields: np.ndarray, seed=17) -> dict:
     """Repeated holdout reconstruction, compared with a training-mean baseline."""
     n = len(fields)
     if n < 8:
-        return dict(available=False, reason="홀드아웃 비교에는 최소 8장이 필요해.")
+        return dict(available=False, reason="홀드아웃 비교에는 최소 8장이 필요합니다.")
     flat = fields.reshape(n, -1)
     rng, rows = np.random.default_rng(seed), []
     with threadpool_limits(limits=2):
@@ -47,7 +47,7 @@ def field_validation(fields: np.ndarray, seed=17) -> dict:
                              mask_iou=float(iou(rebuilt).mean()), mean_baseline_iou=float(iou(baseline).mean())))
     return dict(available=True, repeats=rows, mean_iou=float(np.mean([row["mask_iou"] for row in rows])),
                 mean_baseline_iou=float(np.mean([row["mean_baseline_iou"] for row in rows])),
-                interpretation="이미지 표본 내 재구성 비교야. 대상 인식·3D 정확도·외부 데이터 일반화를 측정하지 않아.")
+                interpretation="이미지 표본 내 재구성 비교입니다. 대상 인식·3D 정확도·외부 데이터 일반화를 측정하지 않습니다.")
 
 
 def shape_features(mask: np.ndarray) -> np.ndarray:
@@ -132,7 +132,7 @@ def visual_embeddings(images, masks, kind="dino", query=""):
 def choose_clusters(matrix: np.ndarray, seed=17, requested_k=0) -> dict:
     n = len(matrix)
     empty = dict(labels=np.zeros(n, dtype=int), candidates=[], silhouette=None, stability=None,
-                 sample_silhouette=np.zeros(n), reason="표본 수 또는 변형이 부족해서 단일 그룹으로 유지했어.")
+                 sample_silhouette=np.zeros(n), reason="표본 수 또는 변형이 부족하여 단일 그룹으로 유지했습니다.")
     if n < 4 or np.max(np.std(matrix, axis=0)) < 1e-7:
         return empty
     k_values = [requested_k] if requested_k else range(2, min(6, n // 2) + 1)
@@ -165,7 +165,7 @@ def choose_clusters(matrix: np.ndarray, seed=17, requested_k=0) -> dict:
     selected = max(candidates, key=lambda row: row["silhouette"])
     # Explicit exploratory thresholds, not statistical significance or automatic semantic labels.
     if not requested_k and (selected["silhouette"] < .18 or selected["subsample_ari"] < .35):
-        empty.update(candidates=candidates, reason="분리도/반복 안정성이 약해서 단일 그룹으로 유지했어.")
+        empty.update(candidates=candidates, reason="분리도 또는 반복 안정성이 낮아 단일 그룹으로 유지했습니다.")
         return empty
     labels = partitions[selected["k"]]
     return dict(labels=labels, candidates=candidates, silhouette=selected["silhouette"],
@@ -173,9 +173,9 @@ def choose_clusters(matrix: np.ndarray, seed=17, requested_k=0) -> dict:
                 reason="수동 그룹 수" if requested_k else "실루엣 점수로 선택한 탐색적 그룹")
 
 
-def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, backend="shape") -> dict:
+def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, backend="shape", depth_results=None) -> dict:
     if len(masks) < 3:
-        raise ValueError("서로 다른 이미지가 최소 3장 필요해. 20장 이상이면 비교하기 좋아.")
+        raise ValueError("서로 다른 이미지가 최소 3장 필요합니다. 비교에는 20장 이상을 권장합니다.")
     raw = np.stack([shape_features(mask) for mask in masks])
     standard = StandardScaler().fit_transform(raw)
     model = fit_field_model(masks)
@@ -183,12 +183,27 @@ def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, ba
     if embeddings is not None:
         matrix = np.asarray(embeddings, dtype=float)
         if matrix.shape[0] != len(masks):
-            raise ValueError("특징 벡터와 이미지 수가 달라.")
+            raise ValueError("특징 벡터와 이미지 수가 일치하지 않습니다.")
     else:
         # Equal total weight to geometry descriptors and spatial signed-distance variation.
         spatial = scores[:, :6]
-        spatial = spatial / max(1e-8, np.sqrt(np.mean(spatial ** 2)))
+        spatial = spatial / max(1e-8, np.sqrt(np.mean(spatial ** 2)) if spatial.size else 0.)
         matrix = np.concatenate([standard / np.sqrt(raw.shape[1]), spatial / np.sqrt(max(1, spatial.shape[1]))], axis=1)
+    depth_raw, depth_standard = None, None
+    if depth_results is not None:
+        from .depth import DEPTH_NAMES, DEPTH_LABELS, depth_features
+        if len(depth_results) != len(masks):
+            raise ValueError("깊이 결과와 분석 이미지 수가 일치하지 않습니다.")
+        identities = {(r["metadata"]["model_id"], r["metadata"]["revision"], r["metadata"]["scale"]) for r in depth_results}
+        if len(identities) != 1:
+            raise ValueError("동일한 깊이 모델과 척도로 분석한 이미지가 필요합니다.")
+        depth_raw = np.stack([depth_features(r) for r in depth_results])
+        depth_standard = StandardScaler().fit_transform(depth_raw)
+        # Replayed features already contain the saved depth block.
+        if embeddings is None or "+depth" not in backend:
+            block = matrix / max(1e-8, np.sqrt(np.mean(np.sum(matrix ** 2, axis=1))))
+            matrix = np.concatenate([block, depth_standard / np.sqrt(len(DEPTH_NAMES))], axis=1)
+        backend = backend if "+depth" in backend else backend + "+depth"
     clusters = choose_clusters(matrix, seed, requested_k)
     labels = clusters["labels"]
     groups = []
@@ -203,6 +218,11 @@ def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, ba
                  for j in np.argsort(np.abs(differences))[-3:][::-1]]
         groups.append(dict(label=int(label), indices=indices.tolist(), medoid=medoid,
                            descriptive_rules=rules, model=fit_field_model([masks[i] for i in indices])))
+        if depth_raw is not None:
+            differences = depth_standard[indices].mean(axis=0)
+            groups[-1]["depth_rules"] = [dict(feature=DEPTH_NAMES[j], label=DEPTH_LABELS[j],
+                standardised_difference=float(differences[j]), group_mean=float(depth_raw[indices, j].mean()),
+                dataset_mean=float(depth_raw[:, j].mean())) for j in np.argsort(np.abs(differences))[-3:][::-1]]
     if np.max(np.std(matrix, axis=0)) < 1e-8:
         projection = np.zeros((len(matrix), 2))
     else:
@@ -224,7 +244,7 @@ def analyse(masks: list[np.ndarray], seed=17, requested_k=0, embeddings=None, ba
     return dict(raw_features=raw, features=matrix, labels=labels, groups=groups, model=model,
                 projection=projection, distance=distance, clusters=clusters,
                 backend=backend, correlations=correlations, seed=seed,
-                validation=field_validation(model["fields"], seed))
+                depth_features=depth_raw, validation=field_validation(model["fields"], seed))
 
 
 def synthesize_field(analysis: dict, mode: str, group_a=0, group_b=0, mix=.5,
@@ -249,11 +269,11 @@ def synthesize_field(analysis: dict, mode: str, group_a=0, group_b=0, mix=.5,
                       input_indices=a["indices"],
                       extrapolation=any(abs(value) > 2 for value in coefficients))
     else:
-        raise ValueError("알 수 없는 형상 생성 방식이야.")
+        raise ValueError("지원하지 않는 형상 생성 방식입니다.")
     mask = field > 0
     mask[:2] = mask[-2:] = False
     mask[:, :2] = mask[:, -2:] = False
     if mask.sum() < 16:
-        raise ValueError("이 조건에서는 형상이 사라져. 변형량이나 보간 비율을 줄여줘.")
+        raise ValueError("이 조건에서는 유효한 형상이 없습니다. 변형량 또는 보간 비율을 줄이십시오.")
     recipe["components_2d"] = int(ndi.label(mask)[1])
     return mask, recipe

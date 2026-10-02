@@ -1,0 +1,2 @@
+# MoGe-2 is included in the default installation.
+-r requirements.txt

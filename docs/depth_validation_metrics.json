@@ -1,0 +1,526 @@
+[
+  {
+    "dataset": "verified_gargoyles",
+    "images": 9,
+    "groups": 1,
+    "excluded": [
+      {
+        "id": "49086ca09773a3a5",
+        "metadata": {
+          "title": "5d59677c8c747555.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "6d0f40b6a8d8fc93",
+        "metadata": {
+          "title": "647d7253a60288fb.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "2e23f21e78ea3ec8",
+        "metadata": {
+          "title": "6c743de974f8a67c.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "449520e3e9b6762b",
+        "metadata": {
+          "title": "8e15ef4f6aab9214.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "7d8b1e645f73216d",
+        "metadata": {
+          "title": "cb1f80b64af477d9.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "fed0b9e80014b6d7",
+        "metadata": {
+          "title": "dc1cfd336c225485.png",
+          "provider": "upload"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      }
+    ],
+    "medoid": "94a826fdd5c5e358",
+    "surface": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "7f5e9e4da05724b69546f639f2cbc9e9f63aa8ed6badb8df80fea59934a6ac86",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 9.769975095000063,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 0.0,
+      "hidden_surface": "unobserved-open-surface",
+      "vertices": 9813,
+      "faces": 18955,
+      "watertight": false,
+      "components_3d": 1,
+      "rejected_discontinuity_faces": 0,
+      "surface_pixel_coverage": 0.9998981047483188,
+      "shell_boundary_edges": 0,
+      "split_contact_vertices": 0,
+      "extents_mm": [
+        120.0,
+        50.03548799933955,
+        77.82423182974344
+      ],
+      "area_mm2": 6685.6002448398485,
+      "volume_mm3": null,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "shell": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "7f5e9e4da05724b69546f639f2cbc9e9f63aa8ed6badb8df80fea59934a6ac86",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 9.769975095000063,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 2.0,
+      "hidden_surface": "translated-visible-surface-shell",
+      "vertices": 19626,
+      "faces": 39268,
+      "watertight": true,
+      "components_3d": 1,
+      "rejected_discontinuity_faces": 0,
+      "surface_pixel_coverage": 0.9998981047483188,
+      "shell_boundary_edges": 679,
+      "split_contact_vertices": 0,
+      "extents_mm": [
+        120.0,
+        52.03548799933955,
+        77.82423182974344
+      ],
+      "area_mm2": 14343.22450791457,
+      "volume_mm3": 8061.34062932568,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "median_inference_seconds": 8.674060616000133,
+    "valid_fractions": [
+      0.9985966669659184,
+      1.0,
+      0.9962637735886755,
+      1.0,
+      0.9957452884066248,
+      1.0,
+      1.0,
+      0.9967499492179566,
+      0.9947926901159363
+    ],
+    "cluster_silhouette": null,
+    "subsample_ari": null
+  },
+  {
+    "dataset": "verified_cats",
+    "images": 12,
+    "groups": 1,
+    "excluded": [
+      {
+        "id": "f0eecda2f2a4344c",
+        "metadata": {
+          "title": "File:Tired 20-year-old cat.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Tired_20-year-old_cat.jpg/960px-Tired_20-year-old_cat.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Tired_20-year-old_cat.jpg",
+          "creator": "Dimitri “Diti” Torterat",
+          "license": "CC BY 2.0 fr",
+          "license_url": "https://creativecommons.org/licenses/by/2.0/fr/deed.en",
+          "provider": "Wikimedia Commons",
+          "query": "cat"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "4c469c91b9aa8743",
+        "metadata": {
+          "title": "File:Domestic Cat Face Shot.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5e/Domestic_Cat_Face_Shot.jpg/960px-Domestic_Cat_Face_Shot.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Domestic_Cat_Face_Shot.jpg",
+          "creator": "Augustus Binu : flickr",
+          "license": "CC BY-SA 3.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+          "provider": "Wikimedia Commons",
+          "query": "cat"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "c9a6a4c2ceda24d4",
+        "metadata": {
+          "title": "File:Domestic cat felis catus.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Domestic_cat_felis_catus.jpg/960px-Domestic_cat_felis_catus.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Domestic_cat_felis_catus.jpg",
+          "creator": "Muhammad Mahdi Karim",
+          "license": "GFDL",
+          "license_url": "http://www.gnu.org/copyleft/fdl.html",
+          "provider": "Wikimedia Commons",
+          "query": "cat"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "f3487ec291230cad",
+        "metadata": {
+          "title": "File:Domestic cat felis catus stare.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Domestic_cat_felis_catus_stare.jpg/960px-Domestic_cat_felis_catus_stare.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Domestic_cat_felis_catus_stare.jpg",
+          "creator": "Muhammad Mahdi Karim",
+          "license": "GFDL",
+          "license_url": "http://www.gnu.org/copyleft/fdl.html",
+          "provider": "Wikimedia Commons",
+          "query": "cat"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      }
+    ],
+    "medoid": "a34ee05fe8cb1bad",
+    "surface": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "aa5c300de939de734ffae3cb0f449300e7ef29a399eab5a3a72c5a7c028fd5fd",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 8.48756550600001,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 0.0,
+      "hidden_surface": "unobserved-open-surface",
+      "vertices": 109176,
+      "faces": 215479,
+      "watertight": false,
+      "components_3d": 1,
+      "rejected_discontinuity_faces": 516,
+      "surface_pixel_coverage": 0.9983722291316117,
+      "shell_boundary_edges": 0,
+      "split_contact_vertices": 2,
+      "extents_mm": [
+        119.99999999999999,
+        60.81240295660019,
+        91.91742296360331
+      ],
+      "area_mm2": 7147.459790461067,
+      "volume_mm3": null,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "shell": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "aa5c300de939de734ffae3cb0f449300e7ef29a399eab5a3a72c5a7c028fd5fd",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 8.48756550600001,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 2.0,
+      "hidden_surface": "translated-visible-surface-shell",
+      "vertices": 218352,
+      "faces": 436704,
+      "watertight": true,
+      "components_3d": 1,
+      "rejected_discontinuity_faces": 516,
+      "surface_pixel_coverage": 0.9983722291316117,
+      "shell_boundary_edges": 2873,
+      "split_contact_vertices": 2,
+      "extents_mm": [
+        119.99999999999999,
+        62.81240295660018,
+        91.91742296360331
+      ],
+      "area_mm2": 16231.724032375278,
+      "volume_mm3": 9488.197398740589,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "median_inference_seconds": 8.531821067500005,
+    "valid_fractions": [
+      0.9998811319892105,
+      1.0,
+      0.9994114035809447,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "cluster_silhouette": null,
+    "subsample_ari": null
+  },
+  {
+    "dataset": "verified_dogs",
+    "images": 8,
+    "groups": 1,
+    "excluded": [
+      {
+        "id": "47c3c9667dee4bbe",
+        "metadata": {
+          "title": "File:Human–canine friendship - girl hugging her dog tightly at golden hour in Laos.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/Human%E2%80%93canine_friendship_-_girl_hugging_her_dog_tightly_at_golden_hour_in_Laos.jpg/960px-Human%E2%80%93canine_friendship_-_girl_hugging_her_dog_tightly_at_golden_hour_in_Laos.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Human%E2%80%93canine_friendship_-_girl_hugging_her_dog_tightly_at_golden_hour_in_Laos.jpg",
+          "creator": "Basile Morin",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "08641bbc053e6d4d",
+        "metadata": {
+          "title": "File:Dhole(Asiatic wild dog).jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/Dhole%28Asiatic_wild_dog%29.jpg/960px-Dhole%28Asiatic_wild_dog%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Dhole(Asiatic_wild_dog).jpg",
+          "creator": "Davidvraju",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "92b05ecc54237ea8",
+        "metadata": {
+          "title": "File:White dog sleeping on the floor with puppies after nursing in Don Det Laos.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/White_dog_sleeping_on_the_floor_with_puppies_after_nursing_in_Don_Det_Laos.jpg/960px-White_dog_sleeping_on_the_floor_with_puppies_after_nursing_in_Don_Det_Laos.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:White_dog_sleeping_on_the_floor_with_puppies_after_nursing_in_Don_Det_Laos.jpg",
+          "creator": "Basile Morin",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "882c465a65109fd7",
+        "metadata": {
+          "title": "File:Liver yellow dog in the water looking at viewer at golden hour in Don Det Laos.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Liver_yellow_dog_in_the_water_looking_at_viewer_at_golden_hour_in_Don_Det_Laos.jpg/960px-Liver_yellow_dog_in_the_water_looking_at_viewer_at_golden_hour_in_Don_Det_Laos.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Liver_yellow_dog_in_the_water_looking_at_viewer_at_golden_hour_in_Don_Det_Laos.jpg",
+          "creator": "Basile Morin",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "ee4c2d50c700199b",
+        "metadata": {
+          "title": "File:Greenland 467 (35130903436) (cropped).jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Greenland_467_%2835130903436%29_%28cropped%29.jpg/960px-Greenland_467_%2835130903436%29_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Greenland_467_(35130903436)_(cropped).jpg",
+          "creator": "Markus Trienke",
+          "license": "CC BY-SA 2.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "d5425db5a935f561",
+        "metadata": {
+          "title": "File:Murgjo Sharr Mountain Dog Nedi Limani.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/Murgjo_Sharr_Mountain_Dog_Nedi_Limani.jpg/960px-Murgjo_Sharr_Mountain_Dog_Nedi_Limani.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Murgjo_Sharr_Mountain_Dog_Nedi_Limani.jpg",
+          "creator": "Nedih Limani",
+          "license": "CC BY-SA 3.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "f0aab27e036a2f71",
+        "metadata": {
+          "title": "File:P S Krøyer 1899 - Sommeraften ved Skagens strand. Kunstneren og hans hustru.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/P_S_Kr%C3%B8yer_1899_-_Sommeraften_ved_Skagens_strand._Kunstneren_og_hans_hustru.jpg/960px-P_S_Kr%C3%B8yer_1899_-_Sommeraften_ved_Skagens_strand._Kunstneren_og_hans_hustru.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:P_S_Kr%C3%B8yer_1899_-_Sommeraften_ved_Skagens_strand._Kunstneren_og_hans_hustru.jpg",
+          "creator": "Peder Severin Krøyer",
+          "license": "Public domain",
+          "license_url": "",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      },
+      {
+        "id": "7c5da54c7fb42820",
+        "metadata": {
+          "title": "File:Kızıl's dog Beyaz–IMG 5539 01.jpg",
+          "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/K%C4%B1z%C4%B1l%27s_dog_Beyaz%E2%80%93IMG_5539_01.jpg/960px-K%C4%B1z%C4%B1l%27s_dog_Beyaz%E2%80%93IMG_5539_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+          "source_url": "https://commons.wikimedia.org/wiki/File:K%C4%B1z%C4%B1l%27s_dog_Beyaz%E2%80%93IMG_5539_01.jpg",
+          "creator": "Kızıl",
+          "license": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "provider": "Wikimedia Commons",
+          "query": "dog"
+        },
+        "reason": "original-mask-quality-flag-or-audited-exclusion"
+      }
+    ],
+    "medoid": "c84d894446cc3d6f",
+    "surface": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "b8c5ff6e6bcd79a7786a6524606b0f899669aa43d7d67370d0e2254d0b1e92eb",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 8.415616567000143,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 0.0,
+      "hidden_surface": "unobserved-open-surface",
+      "vertices": 124631,
+      "faces": 246289,
+      "watertight": false,
+      "components_3d": 7,
+      "rejected_discontinuity_faces": 1650,
+      "surface_pixel_coverage": 0.9940338507186498,
+      "shell_boundary_edges": 0,
+      "split_contact_vertices": 5,
+      "extents_mm": [
+        119.99999999999999,
+        74.5729621593553,
+        85.2376565159273
+      ],
+      "area_mm2": 7813.350258623333,
+      "volume_mm3": null,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "shell": {
+      "method": "predicted-camera-point-map-triangulation",
+      "depth_model": {
+        "model": "moge-base",
+        "model_id": "Ruicheng/moge-2-vitb-normal",
+        "revision": "ca5f0e07ff01d3e5a364c1d954ed12ee1814b368",
+        "max_size": 768,
+        "resolution_level": 9,
+        "device": "cpu",
+        "algorithm": 1,
+        "cache_key": "b8c5ff6e6bcd79a7786a6524606b0f899669aa43d7d67370d0e2254d0b1e92eb",
+        "camera": "model-estimated",
+        "scale": "model-estimated-metres-unverified",
+        "seconds": 8.415616567000143,
+        "hidden_surface": "unobserved"
+      },
+      "size_mm": 120.0,
+      "edge_threshold": 0.03,
+      "max_resolution": 768,
+      "sampling_step": 1,
+      "thickness_mm": 2.0,
+      "hidden_surface": "translated-visible-surface-shell",
+      "vertices": 249262,
+      "faces": 498512,
+      "watertight": true,
+      "components_3d": 7,
+      "rejected_discontinuity_faces": 1650,
+      "surface_pixel_coverage": 0.9940338507186498,
+      "shell_boundary_edges": 2967,
+      "split_contact_vertices": 5,
+      "extents_mm": [
+        119.99999999999999,
+        76.5729621593553,
+        85.2376565159273
+      ],
+      "area_mm2": 17892.638860423038,
+      "volume_mm3": 10530.522409209594,
+      "color": "source-image-vertex-colors",
+      "scale": "user-normalized-size; not a measurement"
+    },
+    "median_inference_seconds": 8.434557407500051,
+    "valid_fractions": [
+      0.9988890684333845,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "cluster_silhouette": null,
+    "subsample_ari": null
+  }
+]

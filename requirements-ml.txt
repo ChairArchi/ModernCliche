@@ -1,3 +1,2 @@
+# DINOv2/CLIP share the embedded depth runtime.
 -r requirements.txt
-torch>=2.4,<3
-transformers>=4.45,<5

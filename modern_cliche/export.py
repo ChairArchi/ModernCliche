@@ -37,6 +37,9 @@ def sample_table(prepared, analysis):
                    silhouette=float(analysis["clusters"]["sample_silhouette"][index]),
                    **prepared["quality"][index])
         row.update(dict(zip(FEATURE_NAMES, analysis["raw_features"][index].tolist())))
+        if analysis.get("depth_features") is not None:
+            from .depth import DEPTH_NAMES
+            row.update(dict(zip(DEPTH_NAMES, analysis["depth_features"][index].tolist())))
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -55,9 +58,9 @@ def mesh_bytes(mesh, extension):
     return mesh.export(file_type=extension)
 
 
-def experiment_zip(prepared, analysis, query="", mesh=None, recipe=None, geometry=None, generated_mask=None):
+def experiment_zip(prepared, analysis, query="", mesh=None, recipe=None, geometry=None, generated_mask=None, selected_depth=None):
     packages = {}
-    for name in ("numpy", "scipy", "scikit-learn", "scikit-image", "rembg", "onnxruntime", "trimesh"):
+    for name in ("numpy", "scipy", "scikit-learn", "scikit-image", "rembg", "onnxruntime", "trimesh", "torch", "transformers", "moge", "utils3d"):
         try:
             packages[name] = version(name)
         except PackageNotFoundError:
@@ -67,7 +70,8 @@ def experiment_zip(prepared, analysis, query="", mesh=None, recipe=None, geometr
     groups = [{key: value for key, value in group.items() if key != "model"} for group in analysis["groups"]]
     recipe = dict(recipe or {})
     recipe["input_ids"] = [prepared["samples"][i].id for i in recipe.get("input_indices", [])]
-    manifest = dict(schema="modern-cliche-experiment-v2", app_version=__version__,
+    depths = prepared.get("depth_results")
+    manifest = dict(schema="modern-cliche-experiment-v3", app_version=__version__,
                     created_utc=datetime.now(timezone.utc).isoformat(), query=query, seed=analysis["seed"],
                     fingerprint=fingerprint(prepared, list(range(len(samples)))),
                     preparation=prepared["settings"], feature_backend=analysis["backend"],
@@ -78,11 +82,45 @@ def experiment_zip(prepared, analysis, query="", mesh=None, recipe=None, geometr
                     field_validation=analysis["validation"],
                     requested_k=analysis.get("requested_k", 0),
                     generation=recipe, geometry=geometry, packages=packages,
+                    depth_estimation=depths[0]["metadata"] if depths else None,
+                    selected_depth=selected_depth["metadata"] if selected_depth is not None else None,
                     limitations=["Exploratory sample morphology, not universal category rules.",
                                  "2D masks preserve viewpoint variation; no semantic part correspondences.",
-                                 "Depth is an explicit medial-radius prior, not recovered 3D geometry.",
+                                 "Monocular depth and camera estimates are unverified; hidden surfaces are unobserved.",
+                                 "Legacy silhouette variation uses a radius prior, not inferred depth.",
                                  "No measurement of human uncanny response or GAN mode collapse."])
-    report = f"""# Modern Cliché — Experiment\n\nQuery: {query}\n\nImages: {len(samples)}; groups: {len(groups)}; seed: {analysis['seed']}.\n\nFeature backend: {analysis['backend']}.\n\n## Method\n\nForeground masks → centre/scale alignment → geometric descriptors and signed-distance fields → clustering with silhouette selection and subsample ARI → group field PCA → observed shape / sigma variation / group interpolation → medial-axis radius ellipsoid union → marching cubes.\n\n## Interpretation\n\nThe groups and feature contrasts describe this collected sample. They are not semantic anatomy, statistically confirmed population laws, or a learned 3D decoder. PCA coefficients change measured sample variation. Viewpoint, segmentation and retrieval bias remain possible causes.\n\n## Reproduction\n\nInput images, raw/normalised masks, features, PCA arrays and generation settings are included. Import this ZIP in the app or run `python -m modern_cliche.cli --experiment experiment.zip --output reproduced`. Match package versions in run.json when comparing numeric results. Reproduction uses saved masks and does not redownload images or segmentation weights.\n\n## Geometry\n\n{dumps(geometry or {})}\n\n## References\n\nSee the repository's docs/METHODOLOGY.md and docs/REFERENCES.md. The statistical field model and 2D→3D lift are project adaptations, not reproductions of the cited papers' full methods.\n"""
+    report = f"""# Modern Cliché — Experiment
+
+Query: {query}
+
+Images: {len(samples)}; groups: {len(groups)}; seed: {analysis['seed']}.
+
+Feature backend: {analysis['backend']}.
+
+## Method
+
+Reviewed foregrounds → silhouette descriptors and signed-distance fields → optional embedded monocular depth and 3D descriptors → clustering with silhouette selection and subsample ARI → observed visible-surface meshing, or explicitly selected legacy silhouette variation.
+
+## Interpretation
+
+Group differences describe this collected sample. They do not identify semantic anatomy or population laws. Depth/camera predictions are unverified. Visible surfaces do not include the unseen back. A translated shell is a fabrication assumption. Legacy PCA varies 2D silhouette fields and its ellipsoid lift still assumes thickness from local radius. Field holdout scores evaluate silhouettes, not 3D reconstruction accuracy.
+
+## Reproduction
+
+Input images, masks, features, PCA, provenance, generation settings and any inferred depth/point arrays are included. Run `python -m modern_cliche.cli --experiment experiment.zip --output reproduced`. Match package versions in run.json. CLI reproduction uses saved arrays and does not download models. App reanalysis reuses saved depth when model and resolution settings match.
+
+## Depth model
+
+{dumps(manifest['depth_estimation'] or manifest['selected_depth'] or {})}
+
+## Geometry
+
+{dumps(geometry or {})}
+
+## References
+
+See docs/METHODOLOGY.md and docs/REFERENCES.md in the repository. Pretrained models are used for inference. The statistical silhouette field and shell operations are project adaptations.
+"""
     output = BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("run.json", dumps(manifest))
@@ -101,8 +139,17 @@ def experiment_zip(prepared, analysis, query="", mesh=None, recipe=None, geometr
             archive.writestr(f"images/{sample.id}.png", png_bytes(sample.image))
             archive.writestr(f"masks/raw/{sample.id}.png", png_bytes(Image.fromarray(raw.astype(np.uint8) * 255)))
             archive.writestr(f"masks/aligned/{sample.id}.png", png_bytes(Image.fromarray(mask.astype(np.uint8) * 255)))
+        if depths:
+            from .depth import encode_depth, depth_preview
+            for sample, depth in zip(prepared["samples"], depths):
+                archive.writestr(f"depth/{sample.id}.npz", encode_depth(depth))
+                archive.writestr(f"depth/{sample.id}.png", png_bytes(depth_preview(depth)))
+        if selected_depth is not None:
+            from .depth import encode_depth, depth_preview
+            archive.writestr("selected_depth.npz", encode_depth(selected_depth))
+            archive.writestr("selected_depth.png", png_bytes(depth_preview(selected_depth)))
         if mesh is not None:
-            for extension in ("stl", "obj", "glb"):
+            for extension in ("stl", "obj", "glb", "ply"):
                 archive.writestr(f"model.{extension}", mesh_bytes(mesh, extension))
         if generated_mask is not None:
             archive.writestr("generated_mask.png", png_bytes(Image.fromarray(generated_mask.astype(np.uint8) * 255)))
