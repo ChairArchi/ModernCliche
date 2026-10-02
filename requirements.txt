@@ -12,11 +12,18 @@ trimesh>=4.0,<5
 plotly>=6.0,<7
 
 # Embedded depth estimation.
-# Use PyPI's Linux CPU wheels on Streamlit Community Cloud. An additional
-# PyTorch index makes uv stop at older duplicate packages (for example requests)
-# and can make dependency resolution unsatisfiable.
-torch>=2.4,<3
-torchvision>=0.19,<1
+# Streamlit Community Cloud is Linux x86_64. Direct CPU wheel URLs avoid
+# uv index-priority conflicts and prevent multi-gigabyte CUDA dependencies.
+torch @ https://download.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl ; python_version == "3.11" and sys_platform == "linux" and platform_machine == "x86_64"
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl ; python_version == "3.11" and sys_platform == "linux" and platform_machine == "x86_64"
+torch @ https://download.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl ; python_version == "3.12" and sys_platform == "linux" and platform_machine == "x86_64"
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl ; python_version == "3.12" and sys_platform == "linux" and platform_machine == "x86_64"
+torch @ https://download.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp314-cp314-manylinux_2_28_x86_64.whl ; python_version == "3.14" and sys_platform == "linux" and platform_machine == "x86_64"
+torchvision @ https://download.pytorch.org/whl/cpu/torchvision-0.29.0%2Bcpu-cp314-cp314-manylinux_2_28_x86_64.whl ; python_version == "3.14" and sys_platform == "linux" and platform_machine == "x86_64"
+# Local non-Linux development fallback.
+torch==2.14.0 ; sys_platform != "linux"
+torchvision==0.29.0 ; sys_platform != "linux"
+
 transformers>=4.45,<5
 matplotlib>=3.9,<4
 huggingface-hub>=0.34,<1
