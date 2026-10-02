@@ -4,33 +4,39 @@ import subprocess
 import sys
 import zipfile
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 import pytest
 import trimesh
 from sklearn.metrics import adjusted_rand_score
 
-from modern_cliche.data import decode_image, deduplicate, Sample
+from modern_cliche.data import deduplicate, normalise_query, Sample
 from modern_cliche.segmentation import normalise_mask, extract_mask
 from modern_cliche.demo import demo_samples
 from modern_cliche.pipeline import prepare, load_experiment, fingerprint
 from modern_cliche.analysis import analyse, choose_clusters, synthesize_field
 from modern_cliche.geometry import lift_to_mesh
+from modern_cliche.morphology import aggregate_depth_results
 from modern_cliche.export import experiment_zip, mesh_bytes
 
 
 @pytest.fixture(scope="module")
 def run():
     prepared = prepare(demo_samples(), size=64)
-    analysis = analyse(prepared["masks"])
+    analysis = analyse(prepared["masks"], requested_k=2)
     return prepared, analysis
 
 
 def test_duplicate_detection_preserves_shape_variation():
     samples = demo_samples()
     kept, removed = deduplicate(samples + [samples[0]])
-    assert len(kept) >= 8  # pHash alone incorrectly removed most morphology variants.
+    assert len(kept) >= 8
     assert removed[-1]["duplicate_of"] == samples[0].id
     assert len({sample.metadata["dataset_label"] for sample in kept}) == 2
+
+
+def test_mixed_language_query_is_preserved_and_translated():
+    assert normalise_query("가고일 gothic church") == "gargoyle gothic church"
+    assert normalise_query("cat 조각") == "cat 조각"
 
 
 def test_scale_translation_normalisation():
@@ -46,7 +52,7 @@ def test_known_groups_and_repeatability(run):
     ground_truth = [sample.metadata["dataset_label"] for sample in prepared["samples"]]
     assert len(analysis["groups"]) == 2
     assert adjusted_rand_score(ground_truth, analysis["labels"]) > .9
-    repeat = analyse(prepared["masks"])
+    repeat = analyse(prepared["masks"], requested_k=2)
     assert np.array_equal(repeat["labels"], analysis["labels"])
     assert analysis["validation"]["available"]
 
@@ -55,6 +61,16 @@ def test_identical_inputs_do_not_invent_clusters():
     result = choose_clusters(np.zeros((12, 10)))
     assert len(set(result["labels"])) == 1
     assert result["silhouette"] is None
+
+
+def test_density_clustering_can_reject_outliers():
+    rng = np.random.default_rng(17)
+    a = rng.normal((-3, 0), .18, size=(35, 2))
+    b = rng.normal((3, 0), .18, size=(35, 2))
+    outliers = np.array([[0, 4], [0, -4], [6, 5], [-6, -5]], dtype=float)
+    result = choose_clusters(np.vstack([a, b, outliers]), seed=17)
+    assert len(set(result["labels"][result["labels"] >= 0])) >= 2
+    assert len(result["outliers"]) >= 1
 
 
 def test_rule_deformation_changes_geometry(run):
@@ -77,7 +93,6 @@ def test_volume_preserves_outline_and_has_no_canvas_plate(run, depth):
     assert metrics["projection_iou"] > .95
     assert metrics["extents_mm"][1] > 5
     assert np.isclose(mesh.extents.max(), 120.)
-    # A box/canvas would match only a small fraction of an ellipse/cross silhouette.
     assert metrics["radius_cover_points"] > 0
 
 
@@ -87,6 +102,21 @@ def test_glb_uses_metres(run):
     mesh, _ = lift_to_mesh(mask)
     scene = trimesh.load(BytesIO(mesh_bytes(mesh, "glb")), file_type="glb")
     assert np.isclose(scene.extents.max(), .120, atol=1e-5)
+
+
+def test_statistical_point_maps_create_shared_visible_surface():
+    results = []
+    y, x = np.mgrid[:72, :72]
+    for offset in (-.05, 0., .05):
+        valid = ((x - 36) / 25) ** 2 + ((y - 36) / 29) ** 2 <= 1
+        z = 2 + .14 * np.cos((x - 36) / 14) + offset
+        points = np.stack([(x - 36) / 36 * z, (y - 36) / 36 * z, z], axis=-1).astype(np.float32)
+        points[~valid] = 0
+        results.append(dict(points=points, valid=valid, depth=np.where(valid, z, 0).astype(np.float32)))
+    aggregate = aggregate_depth_results(results, size=96, coverage_threshold=.5)
+    assert aggregate["valid"].sum() > 500
+    assert aggregate["metadata"]["specimens"] == 3
+    assert np.all(aggregate["points"][aggregate["valid"], 2] > 0)
 
 
 def test_fingerprint_changes_with_reviewed_mask(run):
@@ -109,8 +139,9 @@ def test_export_reproduction_uses_saved_masks_and_features(run, tmp_path):
     assert fingerprint(prepared, list(range(len(samples)))) == fingerprint(restored, list(range(len(samples))))
     assert np.array_equal(manifest["_saved_features"], analysis["features"])
     output = tmp_path / "reproduced"
-    result = subprocess.run([sys.executable, "-m", "modern_cliche.cli", "--experiment", str(archive_path),
-                             "--output", str(output)], capture_output=True, text=True, timeout=60)
+    result = subprocess.run([
+        sys.executable, "-m", "modern_cliche.cli", "--experiment", str(archive_path), "--output", str(output)
+    ], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
     copied = trimesh.load(output / "model.stl")
     assert np.allclose(copied.extents, mesh.extents, atol=1e-4)
@@ -123,7 +154,8 @@ def test_export_reproduction_uses_saved_masks_and_features(run, tmp_path):
 
 
 def test_bad_mask_is_recorded_not_silently_replaced():
-    image = Image.new("RGB", (80, 80), "white")
+    from PIL import Image as PILImage
+    image = PILImage.new("RGB", (80, 80), "white")
     sample = Sample("invalid", image, {"title": "empty"})
     prepared = prepare([sample], method="binary")
     assert not prepared["samples"] and prepared["failures"]
