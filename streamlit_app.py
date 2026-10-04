@@ -17,15 +17,38 @@ st.set_page_config(page_title='EIGENSIGN', layout='wide')
 st.title('EIGENSIGN')
 st.caption('UNIVERSAL ICON → DATASET → SORTING → EIGENSIGN → 3D PHYSICALIZATION')
 st.write('실제 이미지들을 같은 조건으로 정규화하고 PCA/유사도 분석을 거쳐 공통성과 불일치를 2D·3D 형태로 드러내는 프로토타입이야. 생성형 이미지 AI는 사용하지 않아.')
+st.caption('Archive replay note: the original 2026 prototype used Openverse search. This replay falls back to Wikimedia Commons because the archived Openverse request now returns HTTP 401 on Streamlit Cloud.')
 
-API='https://api.openverse.org/v1/images/'
+API='https://commons.wikimedia.org/w/api.php'
 
 def search_openverse(q, n=24):
-    r=requests.get(API,params={'q':q,'page_size':min(n,80),'mature':'false'},timeout=20,headers={'User-Agent':'EIGENSIGN/0.2'})
-    r.raise_for_status(); out=[]
-    for x in r.json().get('results',[]):
-        u=x.get('thumbnail') or x.get('url')
-        if u: out.append({'title':x.get('title') or 'Untitled','thumb':u,'url':x.get('url') or '', 'license':x.get('license') or '', 'source':x.get('source') or x.get('provider') or ''})
+    params={
+        'action':'query',
+        'generator':'search',
+        'gsrsearch':q,
+        'gsrnamespace':6,
+        'gsrlimit':min(int(n),50),
+        'prop':'imageinfo',
+        'iiprop':'url',
+        'iiurlwidth':512,
+        'format':'json',
+        'origin':'*',
+    }
+    r=requests.get(API,params=params,timeout=20,headers={'User-Agent':'EIGENSIGN-Archive/0.2'})
+    r.raise_for_status()
+    out=[]
+    pages=r.json().get('query',{}).get('pages',{})
+    for x in pages.values():
+        ii=(x.get('imageinfo') or [{}])[0]
+        u=ii.get('thumburl') or ii.get('url')
+        if u:
+            out.append({
+                'title':x.get('title') or 'Untitled',
+                'thumb':u,
+                'url':ii.get('descriptionurl') or ii.get('url') or '',
+                'license':'Wikimedia Commons',
+                'source':'wikimedia',
+            })
     return out
 
 def download_items(items):
