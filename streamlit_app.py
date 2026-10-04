@@ -13,10 +13,10 @@ from skimage.feature import hog
 from skimage.measure import marching_cubes
 import trimesh
 
-st.set_page_config(page_title='EIGENSIGN', layout='wide')
-st.title('EIGENSIGN')
-st.caption('UNIVERSAL ICON → DATASET → SORTING → EIGENSIGN → 3D PHYSICALIZATION')
-st.write('실제 이미지들을 같은 조건으로 정규화하고 PCA/유사도 분석을 거쳐 공통성과 불일치를 2D·3D 형태로 드러내는 프로토타입이야. 생성형 이미지 AI는 사용하지 않아.')
+st.set_page_config(page_title='CHIMERA GENERATOR', layout='wide')
+st.title('CHIMERA GENERATOR')
+st.caption('KEYWORD DATASET → SORTING / PCA → EIGENSIGN / ENTROPY → 3D PHYSICALIZATION')
+st.write('Prototype for extracting shared patterns and disagreement from image datasets through normalization, HOG/PCA analysis, and 3D scalar-field reconstruction.')
 st.caption('Archive replay note: the original 2026 prototype used Openverse search. This replay falls back to Wikimedia Commons because the archived Openverse request now returns HTTP 401 on Streamlit Cloud.')
 
 API='https://commons.wikimedia.org/w/api.php'
@@ -125,12 +125,12 @@ for k,v in {'images':[],'meta':[],'analysis':None,'mesh':None}.items():
     if k not in st.session_state: st.session_state[k]=v
 
 st.header('1. DATASET')
-mode=st.radio('Source',['Openverse keyword search','Upload images','Demo EXIT dataset'],horizontal=True)
-if mode=='Openverse keyword search':
+mode=st.radio('Source',['Keyword search','Upload images','Demo EXIT dataset'],horizontal=True)
+if mode=='Keyword search':
     q=st.text_input('Keyword','emergency exit sign pictogram')
     n=st.slider('Max results',8,60,24,4)
     if st.button('SEARCH',type='primary'):
-        with st.spinner('공개 라이선스 이미지 검색 중…'):
+        with st.spinner('Searching public image sources…'):
             try: items=search_openverse(q,n); ims,meta=download_items(items)
             except Exception as e: st.error(str(e)); ims=[]; meta=[]
         st.session_state.images=ims; st.session_state.meta=meta; st.session_state.analysis=None
@@ -150,12 +150,12 @@ ims=st.session_state.images
 if ims:
     st.write(f'**{len(ims)} images loaded**'); cols=st.columns(8)
     for i,im in enumerate(ims[:32]): cols[i%8].image(im,use_container_width=True)
-else: st.info('검색하거나 이미지를 업로드해줘.')
+else: st.info('Search for images or upload a dataset to begin.')
 
 st.header('2. ANALYSIS')
 size=st.select_slider('Normalize resolution',[64,96,128],96)
 if st.button('ANALYZE DATASET',type='primary',disabled=len(ims)<3):
-    with st.spinner('정규화 → HOG → PCA…'):
+    with st.spinner('Normalization → HOG → PCA…'):
         st.session_state.analysis=analyze(ims,size)
 
 if st.session_state.analysis is not None:
@@ -179,7 +179,7 @@ if st.session_state.analysis is not None:
     depth=st.slider('Depth',24,96,48,8)
     if st.button('GENERATE 3D',type='primary'):
         field=entropy_map(data) if mapping=='UNCERTAINTY MASS' else data.mean(0)
-        with st.spinner('scalar field → marching cubes mesh…'): st.session_state.mesh=mesh_from_field(field,depth)
+        with st.spinner('Scalar field → marching cubes mesh…'): st.session_state.mesh=mesh_from_field(field,depth)
     if st.session_state.mesh is not None:
         mesh=st.session_state.mesh; st.plotly_chart(mesh_fig(mesh),use_container_width=True)
         c1,c2=st.columns(2); c1.metric('Vertices',f'{len(mesh.vertices):,}'); c2.metric('Faces',f'{len(mesh.faces):,}')
